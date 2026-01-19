@@ -12,14 +12,15 @@ sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ Build date')/g" $(find ./feeds/lu
 
 WIFI_FILE="./package/mtk/applications/mtwifi-cfg/files/mtwifi.sh"
 #修改WIFI名称
-$WRT_SSID
-sed -i "s/ImmortalWrt/$WRT_SSID/g" $WIFI_FILE
-sed -i "s/$WRT_SSID-2.4G/$WRT_SSID/g" $WIFI_FILE
-sed -i "s/$WRT_SSID-5G/${WRT_SSID}_5G/g" $WIFI_FILE
+if [ -f "$WIFI_FILE" ]; then
+   sed -i "s/ImmortalWrt/$WRT_SSID/g" $WIFI_FILE
+   sed -i "s/$WRT_SSID-2.4G/$WRT_SSID/g" $WIFI_FILE
+   sed -i "s/$WRT_SSID-5G/${WRT_SSID}_5G/g" $WIFI_FILE
 #修改WIFI加密
-sed -i "s/encryption=.*/encryption='psk2+ccmp'/g" $WIFI_FILE
+   sed -i "s/encryption=.*/encryption='psk2+ccmp'/g" $WIFI_FILE
 #修改WIFI密码
-sed -i "/set wireless.default_\${dev}.encryption='psk2+ccmp'/a \\\t\t\t\t\t\set wireless.default_\${dev}.key='$WRT_WORD'" $WIFI_FILE
+   sed -i "/set wireless.default_\${dev}.encryption='psk2+ccmp'/a \\\t\t\t\t\tset wireless.default_\${dev}.key='$WRT_WORD'" $WIFI_FILE
+fi
 
 CFG_FILE="./package/base-files/files/bin/config_generate"
 #修改默认IP地址
@@ -32,15 +33,15 @@ MK_FILE="target/linux/mediatek/image/filogic.mk"
 DTS_DIR="target/linux/mediatek/dts"
 
 if [ -f "$MK_FILE" ]; then
-    echo "正在修正设备 ID 冲突..."
-    #复制一份不带 -mtk 后缀的 DTS 文件，防止编译找不到目标
+    echo "正在执行设备 ID 匹配修正..."
+    # 物理复制 DTS (解决 No rule to make target 报错)
+    # 加上 -f 确保如果文件已存在也能强制覆盖
     if [ -f "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc-mtk.dts" ]; then
-        cp "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc-mtk.dts" "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc.dts"
+        cp -f "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc-mtk.dts" "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc.dts"
     fi
 
-    #精准替换 Makefile 中的设备定义
-    #把设备名从 cmcc_rax3000m-emmc-mtk 统一改为 cmcc,rax3000m-emmc (逗号版)
-    #同时把使用的 DTS 指向我们刚才复制的新文件
+    # 替换 Makefile 中的标识符
+    # 这一步会将生成的固件内部文件夹名改为 cmcc,rax3000m-emmc
     sed -i 's/cmcc_rax3000m-emmc-mtk/cmcc,rax3000m-emmc/g' $MK_FILE
     sed -i 's/mt7981b-cmcc-rax3000m-emmc-mtk/mt7981b-cmcc-rax3000m-emmc/g' $MK_FILE
 fi
