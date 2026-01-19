@@ -27,12 +27,13 @@ sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $CFG_FILE
 #修改默认主机名
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 
-# 修正设备 ID 冲突 (解决 Image check failed 报错)
-# 只精准修改设备定义 ID 和目标列表，不改 DTS 文件名，确保编译不报错
+# 修正 ID 冲突，解决网页升级报错 (最稳妥方案)
+# 不改 Device/ 后面的定义名，只在镜像生成时强制注入支持列表
 MK_FILE="target/linux/mediatek/image/filogic.mk"
 if [ -f "$MK_FILE" ]; then
-    sed -i 's/Device\/cmcc_rax3000m-emmc-mtk/Device\/cmcc,rax3000m-emmc/g' $MK_FILE
-    sed -i 's/TARGET_DEVICES += cmcc_rax3000m-emmc-mtk/TARGET_DEVICES += cmcc,rax3000m-emmc/g' $MK_FILE
+    # 在该设备的定义块中，确保包含路由器内核认账的逗号 ID
+    # 这一步是为了让生成的 metadata 包含 cmcc,rax3000m-emmc
+    sed -i '/cmcc_rax3000m-emmc-mtk/,/endef/ { /SUPPORTED_DEVICES/ s/$/ cmcc,rax3000m-emmc/ }' $MK_FILE
 fi
 
 #配置文件修改
