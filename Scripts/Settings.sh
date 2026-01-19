@@ -28,22 +28,18 @@ sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $CFG_FILE
 #修改默认主机名
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 
-# 核心修正：解决网页升级校验报错
+# 核心修正：直接修改 Makefile 中的 Board ID (解决校验失败)
 MK_FILE="target/linux/mediatek/image/filogic.mk"
+
 if [ -f "$MK_FILE" ]; then
-    echo "正在执行设备 ID 匹配修正..."
-    # 清除可能存在的旧修改，防止重复运行导致语法错
-    sed -i '/SUPPORTED_DEVICES += cmcc,rax3000m-emmc/d' "$MK_FILE"
+    echo "正在执行强制 ID 转换..."
+    # 逻辑：将主 Device ID 直接改为带逗号的版本
+    # 注意：仅修改 Device/ 后的定义，不改内部变量，防止编译报错
+    sed -i 's/Device\/cmcc_rax3000m-emmc-mtk/Device\/cmcc,rax3000m-emmc/g' "$MK_FILE"
     
-    # 核心逻辑：在 Device 定义块内精准插入。使用 \t 确保符合 Makefile 制表符要求
-    # 我们匹配定义行，然后在它后面插入一行支持设备
-    sed -i '/Device\/cmcc_rax3000m-emmc-mtk/a \\tSUPPORTED_DEVICES += cmcc,rax3000m-emmc' "$MK_FILE"
-    
-    echo "修正完成，当前配置预览："
-    grep -A 5 "Device/cmcc_rax3000m-emmc-mtk" "$MK_FILE"
+    # 同时修正对应的配置块内容
+    sed -i '/Device\/cmcc,rax3000m-emmc/,/endef/ s/cmcc_rax3000m-emmc-mtk/cmcc,rax3000m-emmc/g' "$MK_FILE"
 fi
-
-
 
 #配置文件修改
 echo "CONFIG_PACKAGE_luci=y" >> ./.config
